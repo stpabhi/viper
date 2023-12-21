@@ -40,14 +40,11 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/pflag"
 
-	"github.com/spf13/viper/internal/encoding"
-	"github.com/spf13/viper/internal/encoding/dotenv"
-	"github.com/spf13/viper/internal/encoding/hcl"
-	"github.com/spf13/viper/internal/encoding/ini"
-	"github.com/spf13/viper/internal/encoding/javaproperties"
-	"github.com/spf13/viper/internal/encoding/json"
-	"github.com/spf13/viper/internal/encoding/toml"
-	"github.com/spf13/viper/internal/encoding/yaml"
+	"github.com/stpabhi/viper/internal/encoding"
+	"github.com/stpabhi/viper/internal/encoding/dotenv"
+	"github.com/stpabhi/viper/internal/encoding/json"
+	"github.com/stpabhi/viper/internal/encoding/toml"
+	"github.com/stpabhi/viper/internal/encoding/yaml"
 )
 
 // ConfigMarshalError happens when failing to marshal the configuration.
@@ -199,9 +196,6 @@ type Viper struct {
 	configPermissions os.FileMode
 	envPrefix         string
 
-	// Specific commands for ini parsing
-	iniLoadOptions ini.LoadOptions
-
 	automaticEnvApplied bool
 	envKeyReplacer      StringReplacer
 	allowEmptyEnv       bool
@@ -330,41 +324,6 @@ func (v *Viper) resetEncoding() {
 
 		encoderRegistry.RegisterEncoder("toml", codec)
 		decoderRegistry.RegisterDecoder("toml", codec)
-	}
-
-	{
-		codec := hcl.Codec{}
-
-		encoderRegistry.RegisterEncoder("hcl", codec)
-		decoderRegistry.RegisterDecoder("hcl", codec)
-
-		encoderRegistry.RegisterEncoder("tfvars", codec)
-		decoderRegistry.RegisterDecoder("tfvars", codec)
-	}
-
-	{
-		codec := ini.Codec{
-			KeyDelimiter: v.keyDelim,
-			LoadOptions:  v.iniLoadOptions,
-		}
-
-		encoderRegistry.RegisterEncoder("ini", codec)
-		decoderRegistry.RegisterDecoder("ini", codec)
-	}
-
-	{
-		codec := &javaproperties.Codec{
-			KeyDelimiter: v.keyDelim,
-		}
-
-		encoderRegistry.RegisterEncoder("properties", codec)
-		decoderRegistry.RegisterDecoder("properties", codec)
-
-		encoderRegistry.RegisterEncoder("props", codec)
-		decoderRegistry.RegisterDecoder("props", codec)
-
-		encoderRegistry.RegisterEncoder("prop", codec)
-		decoderRegistry.RegisterDecoder("prop", codec)
 	}
 
 	{
@@ -1846,7 +1805,7 @@ func (v *Viper) WatchRemoteConfigOnChannel() error {
 // Retrieve the first found remote configuration.
 func (v *Viper) getKeyValueConfig() error {
 	if RemoteConfig == nil {
-		return RemoteConfigError("Enable the remote features by doing a blank import of the viper/remote package: '_ github.com/spf13/viper/remote'")
+		return RemoteConfigError("Enable the remote features by doing a blank import of the viper/remote package: '_ github.com/stpabhi/viper/remote'")
 	}
 
 	for _, rp := range v.remoteProviders {
@@ -2049,13 +2008,6 @@ func SetConfigPermissions(perm os.FileMode) { v.SetConfigPermissions(perm) }
 
 func (v *Viper) SetConfigPermissions(perm os.FileMode) {
 	v.configPermissions = perm.Perm()
-}
-
-// IniLoadOptions sets the load options for ini parsing.
-func IniLoadOptions(in ini.LoadOptions) Option {
-	return optionFunc(func(v *Viper) {
-		v.iniLoadOptions = in
-	})
 }
 
 func (v *Viper) getConfigType() string {

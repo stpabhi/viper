@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/spf13/viper/internal/testutil"
+	"github.com/stpabhi/viper/internal/testutil"
 )
 
 // var yamlExample = []byte(`Hacker: true
@@ -148,14 +148,6 @@ func initConfigs() {
 	r = bytes.NewReader(jsonExample)
 	unmarshalReader(r, v.config)
 
-	SetConfigType("hcl")
-	r = bytes.NewReader(hclExample)
-	unmarshalReader(r, v.config)
-
-	SetConfigType("properties")
-	r = bytes.NewReader(propertiesExample)
-	unmarshalReader(r, v.config)
-
 	SetConfigType("toml")
 	r = bytes.NewReader(tomlExample)
 	unmarshalReader(r, v.config)
@@ -167,10 +159,6 @@ func initConfigs() {
 	SetConfigType("json")
 	remote := bytes.NewReader(remoteExample)
 	unmarshalReader(remote, v.kvstore)
-
-	SetConfigType("ini")
-	r = bytes.NewReader(iniExample)
-	unmarshalReader(r, v.config)
 }
 
 func initConfig(typ, config string) {
@@ -195,14 +183,6 @@ func initJSON() {
 	unmarshalReader(r, v.config)
 }
 
-func initProperties() {
-	Reset()
-	SetConfigType("properties")
-	r := bytes.NewReader(propertiesExample)
-
-	unmarshalReader(r, v.config)
-}
-
 func initTOML() {
 	Reset()
 	SetConfigType("toml")
@@ -215,22 +195,6 @@ func initDotEnv() {
 	Reset()
 	SetConfigType("env")
 	r := bytes.NewReader(dotenvExample)
-
-	unmarshalReader(r, v.config)
-}
-
-func initHcl() {
-	Reset()
-	SetConfigType("hcl")
-	r := bytes.NewReader(hclExample)
-
-	unmarshalReader(r, v.config)
-}
-
-func initIni() {
-	Reset()
-	SetConfigType("ini")
-	r := bytes.NewReader(iniExample)
 
 	unmarshalReader(r, v.config)
 }
@@ -567,11 +531,6 @@ func TestJSON(t *testing.T) {
 	assert.Equal(t, "0001", Get("id"))
 }
 
-func TestProperties(t *testing.T) {
-	initProperties()
-	assert.Equal(t, "0001", Get("p_id"))
-}
-
 func TestTOML(t *testing.T) {
 	initTOML()
 	assert.Equal(t, "TOML Example", Get("title"))
@@ -580,37 +539,6 @@ func TestTOML(t *testing.T) {
 func TestDotEnv(t *testing.T) {
 	initDotEnv()
 	assert.Equal(t, "DotEnv Example", Get("title_dotenv"))
-}
-
-func TestHCL(t *testing.T) {
-	initHcl()
-	assert.Equal(t, "0001", Get("id"))
-	assert.Equal(t, 0.55, Get("ppu"))
-	assert.Equal(t, "donut", Get("type"))
-	assert.Equal(t, "Cake", Get("name"))
-	Set("id", "0002")
-	assert.Equal(t, "0002", Get("id"))
-	assert.NotEqual(t, "cronut", Get("type"))
-}
-
-func TestIni(t *testing.T) {
-	initIni()
-	assert.Equal(t, "ini", Get("default.name"))
-}
-
-func TestRemotePrecedence(t *testing.T) {
-	initJSON()
-
-	remote := bytes.NewReader(remoteExample)
-	assert.Equal(t, "0001", Get("id"))
-	unmarshalReader(remote, v.kvstore)
-	assert.Equal(t, "0001", Get("id"))
-	assert.NotEqual(t, "cronut", Get("type"))
-	assert.Equal(t, "remote", Get("newkey"))
-	Set("newkey", "newvalue")
-	assert.NotEqual(t, "remote", Get("newkey"))
-	assert.Equal(t, "newvalue", Get("newkey"))
-	Set("newkey", "remote")
 }
 
 func TestEnv(t *testing.T) {
@@ -738,10 +666,6 @@ func TestAllKeys(t *testing.T) {
 
 	ks := sort.StringSlice{
 		"title",
-		"author.bio",
-		"author.e-mail",
-		"author.github",
-		"author.name",
 		"newkey",
 		"owner.organization",
 		"owner.dob",
@@ -753,21 +677,12 @@ func TestAllKeys(t *testing.T) {
 		"hobbies",
 		"clothing.jacket",
 		"clothing.trousers",
-		"default.import_path",
-		"default.name",
-		"default.version",
 		"clothing.pants.size",
 		"age",
 		"hacker",
 		"id",
 		"type",
 		"eyes",
-		"p_id",
-		"p_ppu",
-		"p_batters.batter.type",
-		"p_type",
-		"p_name",
-		"foos",
 		"title_dotenv",
 		"type_dotenv",
 		"name_dotenv",
@@ -780,23 +695,12 @@ func TestAllKeys(t *testing.T) {
 			"dob":          dob,
 		},
 		"title": "TOML Example",
-		"author": map[string]interface{}{
-			"e-mail": "fake@localhost",
-			"github": "https://github.com/Unknown",
-			"name":   "Unknown",
-			"bio":    "Gopher.\nCoding addict.\nGood man.\n",
-		},
-		"ppu":  0.55,
-		"eyes": "brown",
+		"ppu":   0.55,
+		"eyes":  "brown",
 		"clothing": map[string]interface{}{
 			"trousers": "denim",
 			"jacket":   "leather",
 			"pants":    map[string]interface{}{"size": "large"},
-		},
-		"default": map[string]interface{}{
-			"import_path": "gopkg.in/ini.v1",
-			"name":        "ini",
-			"version":     "v1",
 		},
 		"id": "0001",
 		"batters": map[string]interface{}{
@@ -814,27 +718,10 @@ func TestAllKeys(t *testing.T) {
 			"snowboarding",
 			"go",
 		},
-		"age":    35,
-		"type":   "donut",
-		"newkey": "remote",
-		"name":   "Cake",
-		"p_id":   "0001",
-		"p_ppu":  "0.55",
-		"p_name": "Cake",
-		"p_batters": map[string]interface{}{
-			"batter": map[string]interface{}{"type": "Regular"},
-		},
-		"p_type": "donut",
-		"foos": []map[string]interface{}{
-			{
-				"foo": []map[string]interface{}{
-					{"key": 1},
-					{"key": 2},
-					{"key": 3},
-					{"key": 4},
-				},
-			},
-		},
+		"age":          35,
+		"type":         "donut",
+		"newkey":       "remote",
+		"name":         "Cake",
 		"title_dotenv": "DotEnv Example",
 		"type_dotenv":  "donut",
 		"name_dotenv":  "Cake",
@@ -1336,24 +1223,6 @@ func TestFindsNestedKeys(t *testing.T) {
 		"clothing.trousers":   "denim",
 		"owner.dob":           dob,
 		"beard":               true,
-		"foos": []map[string]interface{}{
-			{
-				"foo": []map[string]interface{}{
-					{
-						"key": 1,
-					},
-					{
-						"key": 2,
-					},
-					{
-						"key": 3,
-					},
-					{
-						"key": 4,
-					},
-				},
-			},
-		},
 	}
 
 	for key, expectedValue := range expected {
@@ -1584,30 +1453,6 @@ func TestWriteConfig(t *testing.T) {
 		input           []byte
 		expectedContent []byte
 	}{
-		"hcl with file extension": {
-			configName:      "c",
-			inConfigType:    "hcl",
-			outConfigType:   "hcl",
-			fileName:        "c.hcl",
-			input:           hclExample,
-			expectedContent: hclWriteExpected,
-		},
-		"hcl without file extension": {
-			configName:      "c",
-			inConfigType:    "hcl",
-			outConfigType:   "hcl",
-			fileName:        "c",
-			input:           hclExample,
-			expectedContent: hclWriteExpected,
-		},
-		"hcl with file extension and mismatch type": {
-			configName:      "c",
-			inConfigType:    "hcl",
-			outConfigType:   "json",
-			fileName:        "c.hcl",
-			input:           hclExample,
-			expectedContent: hclWriteExpected,
-		},
 		"json with file extension": {
 			configName:      "c",
 			inConfigType:    "json",
@@ -1631,22 +1476,6 @@ func TestWriteConfig(t *testing.T) {
 			fileName:        "c.json",
 			input:           jsonExample,
 			expectedContent: jsonWriteExpected,
-		},
-		"properties with file extension": {
-			configName:      "c",
-			inConfigType:    "properties",
-			outConfigType:   "properties",
-			fileName:        "c.properties",
-			input:           propertiesExample,
-			expectedContent: propertiesWriteExpected,
-		},
-		"properties without file extension": {
-			configName:      "c",
-			inConfigType:    "properties",
-			outConfigType:   "properties",
-			fileName:        "c",
-			input:           propertiesExample,
-			expectedContent: propertiesWriteExpected,
 		},
 		"yaml with file extension": {
 			configName:      "c",
